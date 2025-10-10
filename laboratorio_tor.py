@@ -58,7 +58,7 @@ if __name__ == '__main__':
     try:
         archivo_investigacion = open('investigacion.txt', 'a')
         hora = time.ctime()
-        print(f"Lectura:{i+1} - Fecha:{datetime.now()}")
+        print(f"Fecha:{datetime.now()}")
         result = Investigacion()
         EscribirArchivo(result)
         archivo_investigacion.close()
