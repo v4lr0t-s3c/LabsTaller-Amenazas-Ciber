@@ -1,0 +1,59 @@
+# Maquinas objetivo para escanear con OpenVAS.
+#
+# Este archivo es independiente de docker-compose.yml (el stack de OpenVAS).
+# No se mezclan: se levantan y se bajan por separado.
+#
+#   Levantar:   docker compose -f docker-compose.targets.yml up -d
+#   Ver:        docker compose -f docker-compose.targets.yml ps
+#   Entrar:     docker compose -f docker-compose.targets.yml exec metasploitable bash
+#   Bajar:      docker compose -f docker-compose.targets.yml down
+#
+# Los objetivos se conectan a la red externa 'openvas_default', que es la que
+# ya usa el escaner. Asi OpenVAS los alcanza por su nombre de red
+# (metasploitable, juice-shop...) sin tocar docker-compose.yml.
+#
+# IMPORTANTE: ningun objetivo publica puertos. Si los expones, un contenedor
+# queda accesible desde toda tu red local.
+
+name: targets
+
+services:
+  # Host deliberadamente vulnerable para practicas de escaneo.
+  # Derivado de Metasploitable 3, imagen de EDURange (proyecto real de range
+  # de seguridad). Es una VM Ubuntu 14.04 completa usada como contenedor, por
+  # eso no tiene systemd y los servicios se arrancan a mano.
+  #
+  # Servicios que quedan escuchando:
+  #   21/ProFTPD    22/SSH        80/Apache+PHP (DVWA, phpMyAdmin)
+  #   139,445/Samba 3306/MySQL   6667,6697/UnrealIRCd  8080/Continuum
+  #
+  # Limitacion: esta imagen NO trae vsftpd, squid, TFTP, NFS, xinetd, VNC,
+  # Tomcat, Jenkins ni Zabbic, que si incluye Metasploitable 3 completo. Para
+  # un objetivo mas completo habria que construir la imagen desde la ISO/OVA
+  # oficial de Rapid7.
+  #
+  # Credenciales conocidas para practica:
+  #   MySQL  root/root      DVWA  admin/password
+  metasploitable:
+    image: edurange2/metasploitable3
+    container_name: metasploitable
+    hostname: metasploitable
+    restart: unless-stopped
+    command: >
+      bash -c "/etc/init.d/ssh start;
+               /etc/init.d/mysql start;
+               /etc/init.d/smbd start;
+               /etc/init.d/nmbd start;
+               /etc/init.d/proftpd start;
+               /etc/init.d/apache2 start;
+               /etc/init.d/continuum start;
+               /etc/init.d/unrealircd start;
+               tail -f /dev/null"
+    networks:
+      - openvas
+
+networks:
+  # Red del stack de OpenVAS. Ya existe, no la crees ni la borres aqui.
+  openvas:
+    name: openvas_default
+    external: true
